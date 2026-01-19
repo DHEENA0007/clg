@@ -46,7 +46,7 @@ class SignToTextApp extends StatelessWidget {
             elevation: 0,
             centerTitle: true,
           ),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             color: const Color(0xFF1D1E33),
             elevation: 8,
             shape: RoundedRectangleBorder(

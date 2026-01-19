@@ -1,5 +1,5 @@
 """
-Hand Landmark Detection using MediaPipe (Optional)
+Hand Landmark Detection using MediaPipe Tasks API
 
 This module provides hand landmark detection from images.
 Requires: mediapipe, opencv-python, numpy
@@ -7,12 +7,12 @@ Requires: mediapipe, opencv-python, numpy
 Install with:
 pip install mediapipe opencv-python numpy
 
-If these packages are not available, the API will fall back to 
-accepting pre-computed landmarks from the client.
+Uses the new MediaPipe Tasks API (v0.10.10+)
 """
 import base64
 import logging
-from typing import List, Optional, Tuple
+import os
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +21,42 @@ try:
     import cv2
     import numpy as np
     import mediapipe as mp
+    from mediapipe.tasks import python
+    from mediapipe.tasks.python import vision
     MEDIAPIPE_AVAILABLE = True
-    logger.info("MediaPipe is available for server-side hand detection")
-except ImportError:
+    logger.info("MediaPipe Tasks API is available for server-side hand detection")
+except ImportError as e:
     MEDIAPIPE_AVAILABLE = False
-    logger.warning("MediaPipe not available. Server-side hand detection disabled.")
+    logger.warning(f"MediaPipe not available. Server-side hand detection disabled. Error: {e}")
     logger.warning("Install with: pip install mediapipe opencv-python numpy")
+
+
+# Path to the hand landmarker model
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'hand_landmarker.task')
+
+# Download URL for the model
+MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task"
+
+
+def download_model():
+    """Download the hand landmarker model if not present"""
+    if os.path.exists(MODEL_PATH):
+        return True
+    
+    try:
+        import urllib.request
+        logger.info(f"Downloading hand landmarker model from {MODEL_URL}")
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        logger.info("Model downloaded successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to download model: {e}")
+        return False
 
 
 class MediaPipeHandDetector:
     """
-    Hand landmark detection using MediaPipe.
+    Hand landmark detection using MediaPipe Tasks API.
     Detects 21 hand landmarks from an image.
     """
     
@@ -39,13 +64,20 @@ class MediaPipeHandDetector:
         if not MEDIAPIPE_AVAILABLE:
             raise RuntimeError("MediaPipe is not installed")
         
-        self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=True,
-            max_num_hands=1,
-            min_detection_confidence=0.7,
+        # Download model if needed
+        if not download_model():
+            raise RuntimeError("Failed to download hand landmarker model")
+        
+        # Create hand landmarker
+        base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            num_hands=1,
+            min_hand_detection_confidence=0.5,
+            min_hand_presence_confidence=0.5,
             min_tracking_confidence=0.5
         )
+        self.detector = vision.HandLandmarker.create_from_options(options)
     
     def detect_from_base64(self, base64_image: str) -> Optional[List[List[float]]]:
         """
@@ -86,21 +118,23 @@ class MediaPipeHandDetector:
         try:
             # Convert BGR to RGB
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            height, width = image.shape[:2]
             
-            # Process image
-            results = self.hands.process(image_rgb)
+            # Create MediaPipe Image
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
             
-            if not results.multi_hand_landmarks:
+            # Detect hand landmarks
+            detection_result = self.detector.detect(mp_image)
+            
+            if not detection_result.hand_landmarks:
                 return None
             
             # Get first hand
-            hand_landmarks = results.multi_hand_landmarks[0]
+            hand_landmarks = detection_result.hand_landmarks[0]
             
             # Convert to list format
-            height, width = image.shape[:2]
             landmarks = []
-            
-            for lm in hand_landmarks.landmark:
+            for lm in hand_landmarks:
                 # Convert normalized coordinates to pixel coordinates
                 landmarks.append([
                     lm.x * width,
@@ -116,7 +150,8 @@ class MediaPipeHandDetector:
     
     def close(self):
         """Release MediaPipe resources"""
-        self.hands.close()
+        if hasattr(self, 'detector'):
+            self.detector.close()
 
 
 # Global detector instance (lazy loaded)

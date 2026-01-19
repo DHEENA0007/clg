@@ -150,6 +150,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
@@ -164,60 +166,75 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 380;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E21),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             // Header
-            _buildHeader(context),
+            _buildHeader(context, isSmallScreen),
 
-            // Camera View
+            // Camera View - Takes most of the space
             Expanded(
-              flex: 3,
-              child: _buildCameraView(context),
+              flex: 5,
+              child: _buildCameraView(context, isSmallScreen),
             ),
 
-            // Text Display
+            // Text Display - Compact area
             Expanded(
-              flex: 1,
-              child: _buildTextDisplay(context),
+              flex: 2,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
+                child: const TextDisplayWidget(),
+              ),
             ),
 
-            // Control Panel
-            _buildControlPanel(context),
+            // Control Panel - Fixed at bottom
+            Padding(
+              padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 8),
+              child: ControlPanelWidget(compact: isSmallScreen),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, bool isSmallScreen) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 8 : 12,
+        vertical: isSmallScreen ? 8 : 12,
+      ),
       child: Row(
         children: [
           IconButton(
             icon: Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_back, color: Colors.white),
+              child: Icon(Icons.arrow_back, color: Colors.white, size: isSmallScreen ? 20 : 24),
             ),
             onPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: isSmallScreen ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Sign Detection',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        fontSize: isSmallScreen ? 16 : 18,
                       ),
                 ),
                 Consumer<DetectionProvider>(
@@ -225,25 +242,39 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     return Row(
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 6,
+                          height: 6,
                           decoration: BoxDecoration(
-                            color: provider.isDetecting
-                                ? Colors.green
-                                : Colors.orange,
+                            color: provider.isDetecting ? Colors.green : Colors.orange,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          provider.isDetecting
-                              ? 'Detection Active'
-                              : 'Detection Paused',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.white60,
-                                  ),
+                          provider.isDetecting ? 'Active' : 'Paused',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.white60,
+                                fontSize: isSmallScreen ? 11 : 13,
+                              ),
                         ),
+                        if (provider.lastDetectedSign.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C63FF).withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              provider.lastDetectedSign,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: isSmallScreen ? 12 : 14,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     );
                   },
@@ -253,12 +284,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           ),
           IconButton(
             icon: Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.flip_camera_ios, color: Colors.white),
+              child: Icon(Icons.flip_camera_ios, color: Colors.white, size: isSmallScreen ? 20 : 24),
             ),
             onPressed: _switchCamera,
           ),
@@ -267,11 +298,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     ).animate().fadeIn(duration: 300.ms);
   }
 
-  Widget _buildCameraView(BuildContext context) {
+  Widget _buildCameraView(BuildContext context, bool isSmallScreen) {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 12 : 16,
+        vertical: isSmallScreen ? 8 : 12,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 24),
         border: Border.all(
           color: Colors.white.withOpacity(0.1),
           width: 2,
@@ -285,7 +319,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 18 : 22),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -295,17 +329,25 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             else
               Container(
                 color: const Color(0xFF1D1E33),
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(
-                        color: Color(0xFF6C63FF),
+                      SizedBox(
+                        width: isSmallScreen ? 36 : 44,
+                        height: isSmallScreen ? 36 : 44,
+                        child: const CircularProgressIndicator(
+                          color: Color(0xFF6C63FF),
+                          strokeWidth: 3,
+                        ),
                       ),
-                      SizedBox(height: 16),
+                      SizedBox(height: isSmallScreen ? 12 : 16),
                       Text(
                         'Initializing camera...',
-                        style: TextStyle(color: Colors.white60),
+                        style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: isSmallScreen ? 13 : 15,
+                        ),
                       ),
                     ],
                   ),
@@ -316,7 +358,68 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             const DetectionOverlay(),
 
             // Corner Guide
-            _buildCornerGuides(),
+            _buildCornerGuides(isSmallScreen),
+            
+            // Detected Sign Display (Large overlay)
+            Positioned(
+              top: isSmallScreen ? 12 : 16,
+              left: 0,
+              right: 0,
+              child: Consumer<DetectionProvider>(
+                builder: (context, provider, _) {
+                  if (provider.lastDetectedSign.isEmpty) return const SizedBox.shrink();
+                  
+                  return Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 16 : 20,
+                        vertical: isSmallScreen ? 8 : 12,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF6C63FF).withOpacity(0.9),
+                            const Color(0xFF00D9FF).withOpacity(0.9),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6C63FF).withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            provider.lastEmoji ?? '🤟',
+                            style: TextStyle(fontSize: isSmallScreen ? 24 : 28),
+                          ),
+                          SizedBox(width: isSmallScreen ? 8 : 12),
+                          Text(
+                            provider.lastDetectedSign,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: isSmallScreen ? 28 : 36,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    ).scale(
+                      begin: const Offset(1.0, 1.0),
+                      end: const Offset(1.05, 1.05),
+                      duration: 800.ms,
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -326,73 +429,49 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         );
   }
 
-  Widget _buildCornerGuides() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const size = 40.0;
-        const thickness = 3.0;
-        const color = Color(0xFF6C63FF);
-        const radius = 22.0;
+  Widget _buildCornerGuides(bool isSmallScreen) {
+    final size = isSmallScreen ? 32.0 : 40.0;
+    const thickness = 3.0;
+    const color = Color(0xFF6C63FF);
+    final radius = isSmallScreen ? 18.0 : 22.0;
 
-        return Stack(
-          children: [
-            // Top Left
-            Positioned(
-              top: 0,
-              left: 0,
-              child: _buildCorner(
-                size,
-                thickness,
-                color,
-                topLeft: radius,
-              ),
-            ),
-            // Top Right
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Transform.flip(
-                flipX: true,
-                child: _buildCorner(
-                  size,
-                  thickness,
-                  color,
-                  topLeft: radius,
-                ),
-              ),
-            ),
-            // Bottom Left
-            Positioned(
-              bottom: 0,
-              left: 0,
-              child: Transform.flip(
-                flipY: true,
-                child: _buildCorner(
-                  size,
-                  thickness,
-                  color,
-                  topLeft: radius,
-                ),
-              ),
-            ),
-            // Bottom Right
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Transform.flip(
-                flipX: true,
-                flipY: true,
-                child: _buildCorner(
-                  size,
-                  thickness,
-                  color,
-                  topLeft: radius,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    return Stack(
+      children: [
+        // Top Left
+        Positioned(
+          top: 0,
+          left: 0,
+          child: _buildCorner(size, thickness, color, topLeft: radius),
+        ),
+        // Top Right
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Transform.flip(
+            flipX: true,
+            child: _buildCorner(size, thickness, color, topLeft: radius),
+          ),
+        ),
+        // Bottom Left
+        Positioned(
+          bottom: 0,
+          left: 0,
+          child: Transform.flip(
+            flipY: true,
+            child: _buildCorner(size, thickness, color, topLeft: radius),
+          ),
+        ),
+        // Bottom Right
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Transform.flip(
+            flipX: true,
+            flipY: true,
+            child: _buildCorner(size, thickness, color, topLeft: radius),
+          ),
+        ),
+      ],
     );
   }
 
@@ -413,20 +492,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         ),
       ),
     );
-  }
-
-  Widget _buildTextDisplay(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: TextDisplayWidget(),
-    ).animate().fadeIn(delay: 200.ms, duration: 400.ms).slideY(begin: 0.1, end: 0);
-  }
-
-  Widget _buildControlPanel(BuildContext context) {
-    return const ControlPanelWidget()
-        .animate()
-        .fadeIn(delay: 300.ms, duration: 400.ms)
-        .slideY(begin: 0.2, end: 0);
   }
 }
 

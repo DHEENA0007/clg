@@ -35,6 +35,12 @@ class DetectionProvider extends ChangeNotifier {
   int get totalDetections => _totalDetections;
   double get averageConfidence => _averageConfidence;
   bool get isConnected => _wsService.isConnected;
+  
+  // Last detected sign for UI display
+  String get lastDetectedSign => _currentDetection?.sign ?? '';
+  String? get lastEmoji => _currentDetection?.emoji;
+  double get lastConfidence => _currentDetection?.confidence ?? 0.0;
+
 
   /// Start detection
   Future<void> startDetection() async {

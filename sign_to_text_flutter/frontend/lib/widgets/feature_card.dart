@@ -6,6 +6,7 @@ class FeatureCard extends StatelessWidget {
   final String description;
   final List<Color> gradient;
   final VoidCallback? onTap;
+  final bool compact;
 
   const FeatureCard({
     super.key,
@@ -14,6 +15,7 @@ class FeatureCard extends StatelessWidget {
     required this.description,
     required this.gradient,
     this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -21,7 +23,7 @@ class FeatureCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 12 : 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -31,29 +33,28 @@ class FeatureCard extends StatelessWidget {
               gradient[1].withOpacity(0.1),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(compact ? 16 : 20),
           border: Border.all(
             color: gradient[0].withOpacity(0.3),
           ),
           boxShadow: [
             BoxShadow(
               color: gradient[0].withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              blurRadius: compact ? 12 : 20,
+              offset: Offset(0, compact ? 6 : 10),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(compact ? 8 : 12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: gradient),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(compact ? 10 : 14),
               ),
-              child: Icon(icon, color: Colors.white, size: 28),
+              child: Icon(icon, color: Colors.white, size: compact ? 22 : 28),
             ),
             const Spacer(),
             Text(
@@ -61,13 +62,17 @@ class FeatureCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
+                    fontSize: compact ? 14 : 16,
                   ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: compact ? 2 : 4),
             Text(
               description,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white60,
+                    fontSize: compact ? 11 : 13,
                   ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
